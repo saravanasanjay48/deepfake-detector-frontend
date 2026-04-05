@@ -29,10 +29,14 @@ export default function App() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await axios.post(`${API}/predict`, formData);
+      const res = await axios.post(`${API}/predict`, formData, { timeout: 120000 });
       setResult(res.data);
     } catch (e) {
-      setResult({ error: 'Something went wrong. Is the server running?' });
+      if (e.response && e.response.status === 503) {
+        setResult({ error: 'Model is warming up! Please wait 30 seconds and try again.' });
+      } else {
+        setResult({ error: 'Something went wrong. Is the server running?' });
+      }
     }
     setLoading(false);
   };
@@ -90,7 +94,7 @@ export default function App() {
             transition:'all 0.2s',marginBottom:'20px'
           }}
         >
-          {loading ? '🔄 Analyzing...' : '🔍 Detect Deepfake'}
+          {loading ? '🔄 Analyzing... (may take up to 60 seconds)' : '🔍 Detect Deepfake'}
         </button>
 
         {result && !result.error && result.label !== 'unknown' && (
@@ -106,7 +110,6 @@ export default function App() {
             <div style={{color:'#d1d5db',marginBottom:'16px'}}>
               Confidence: <strong>{result.confidence}%</strong>
             </div>
-
             <div style={{display:'flex',gap:'12px',justifyContent:'center',flexWrap:'wrap',marginBottom:'16px'}}>
               <div style={{background:'rgba(34,197,94,0.15)',padding:'8px 16px',borderRadius:'8px',fontSize:'14px'}}>
                 ✅ Real: {result.real_probability}%
@@ -115,12 +118,9 @@ export default function App() {
                 ⚠️ Fake: {result.fake_probability}%
               </div>
             </div>
-
             {result.analysis && (
               <div style={{borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:'16px'}}>
-                <p style={{color:'#9ca3af',fontSize:'13px',margin:'0 0 10px'}}>
-                  Analysis breakdown:
-                </p>
+                <p style={{color:'#9ca3af',fontSize:'13px',margin:'0 0 10px'}}>Analysis breakdown:</p>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
                   <div style={{background:'rgba(255,255,255,0.05)',padding:'10px',borderRadius:'8px',fontSize:'13px',textAlign:'left'}}>
                     🤖 Deep Learning<br/>
@@ -149,7 +149,7 @@ export default function App() {
         )}
 
         {result?.error && (
-          <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid #ef4444',borderRadius:'12px',padding:'16px',color:'#fca5a5'}}>
+          <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid #ef4444',borderRadius:'12px',padding:'16px',color:'#fca5a5',textAlign:'center'}}>
             ❌ {result.error}
           </div>
         )}
